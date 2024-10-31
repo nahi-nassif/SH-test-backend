@@ -1,12 +1,12 @@
 // controllers/userController.js
 const User = require("../models/User")
+const jwt = require('../utils/jwt');
 
 exports.register = async (req, res) => {
     try {
         // Attempt to create the a user in the database
         const user = await User.create({});
-        console.log("user: ", user)
-        res.status(201).json({ message: "user created"});
+        res.status(201).json({ token: jwt.generateToken(user) });
 
     } catch (error) {
         console.error('Error creating user:', error);
