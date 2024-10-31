@@ -7,6 +7,7 @@ const ChatSchema = new mongoose.Schema(
     message: { type: String, required: true }, //message sent
     fromId: { type: String, required: true },  // 'userId' or 'senderId'
     timestamp: { type: Date, default: Date.now },
+    isReply: { type: Boolean, default: false }
 },
 {
     query: {

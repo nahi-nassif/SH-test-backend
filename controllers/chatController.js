@@ -1,45 +1,38 @@
 // controllers/chatController.js
 const Chat = require('../models/Chat');
+const spotify = require("../services/spotify");
+const gemini = require("../services/gemini");
+const marked = require('marked');
 
-exports.saveChat = async (req, res) => {
+const saveChat = async (userId, fromId, message, isReply = false) => {
 
     try {
-        // Attempt to create the a chat in the database
-        const { message, fromId } = req.body;
-        const userId = req.user?.id;
 
         if(!message || !fromId || !userId){
             // Send an appropriate error response
-            res.status(500).json({
-                message: 'Invalid or Missing Fields for creating a chat.',
-                error: 'Invalid or Missing Fields for creating a chat.'
-            });
-            return;
+            throw new Error("Invalid or Missing Fields for creating a chat.")
         }
-
+        // Attempt to create the a chat in the database
         const chat = new Chat({ 
             userId: userId, 
             message: message,
-            fromId: fromId
+            fromId: fromId,
+            isReply: isReply
         });
-
+        
         await chat.save();
-        res.status(201).json({ message: 'Chat saved' });
+        return { message: 'Chat saved' };
 
     } catch (error) {
         console.error('Error creating chat:', error);
         // Send an appropriate error response
-        res.status(500).json({
-            message: 'An error occurred while creating the chat.',
-            error: error.message,  //include error details
-        });
+        throw new Error("An error occurred while creating the chat.")
     }
 };
 
 exports.getChatByUserId = async (req, res) => {
 
     try {
-        // Attempt to create the a chat in the database
         const userId = req.user?.id;
         const withId = req.params.withId;
 
@@ -65,3 +58,47 @@ exports.getChatByUserId = async (req, res) => {
         });
     }
 };
+
+exports.chatWithId = async (req, res) => {
+
+    try {
+        const userId = req.user?.id;
+        const withId = req.params.withId;
+        const message = req.body.message;
+
+        if(!withId || !message || !userId){
+            res.status(500).json({
+                message: 'Invalid request for sending messages.',
+                error: 'Invalid request for sending messages.'
+            });
+            return;
+        }
+
+        //Log the user message
+        saveChat(userId, withId, message , false);
+
+        //Check if the AI is setup correctly
+        if(!gemini.isGeminiSetupCorrectly(withId)){
+            const artistName = await spotify.getArtistNameById(withId);
+            gemini.setupNewGemini({ id: withId, name: artistName});
+        }
+
+        const apiResponse = await gemini.getGeminiResponse(message);
+
+        //Log the AI response
+        saveChat(userId, withId, apiResponse.message, true);
+
+        const html = marked.parse(apiResponse.message.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/,""));
+
+        res.status(201).json({ message: html.replace(/[\n]/g,'<br/>')})
+
+    } catch (error){
+        console.error('Error getting a response from gemini:', error);
+        // Send an appropriate error response
+        res.status(500).json({
+            message: 'An error occurred while getting a response from gemini.',
+            error: error.message,  //include error details
+        });
+    }
+
+}

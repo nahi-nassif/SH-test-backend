@@ -56,8 +56,12 @@ exports.getGenres = async () => {
             method: 'GET',
             headers: { 'Authorization': 'Bearer ' + await getToken() },
         });
-
-        return response2.json();
+        const resp2 = response2.json();
+        //In case of an error
+        if(response2.status !== 200){  
+            throw new Error("Failed to get Spotify Genres");
+        }
+        return resp2?.genres || [];
     }
 
     //In case of an error
@@ -84,16 +88,56 @@ exports.getArtistsByGenre = async (query = "",type = 'artist',limit = 20,offset 
             method: 'GET',
             headers: { 'Authorization': 'Bearer ' + await getToken() },
         });
-
-        return response2.json();
+        const resp2 = response2.json();
+        //In case of an error
+        if(response2.status !== 200){  
+            throw new Error("Failed to get Spotify Artists");
+        }
+        return resp2.artists?.items || [];
     }
 
     //In case of an error
     if(response.status !== 200){  
-        throw new Error("Failed to get Spotify Genres");
+        throw new Error("Failed to get Spotify Artists");
     }
 
     const resp = await response.json();
 
     return resp.artists?.items || [];
+}
+
+exports.getArtistNameById = async (id) => {
+
+    if(!id)
+        throw new Error("Invalid ID"); 
+
+    const response = await fetch(`${apiUrl}/artists/${id}`, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + await getAccessToken() },
+    });
+
+    //In any case the Token was not authorized
+    if(response.status === 401 || response.status === 403){
+        const response2 = await fetch(`${apiUrl}/artists/${id}`, {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + await getToken() },
+        });
+        const resp2 = response2.json();
+        //In case of an error
+        if(response2.status !== 200){  
+            throw new Error("Failed to get Spotify Artist");
+        }
+
+        return resp2.name;
+    }
+
+    //In case of an error
+    if(response.status !== 200){  
+        throw new Error("Failed to get Spotify Artist");
+    }
+
+    const resp = await response.json();
+
+    return resp.name;
+
 }
