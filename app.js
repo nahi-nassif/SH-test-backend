@@ -3,6 +3,8 @@ const express = require('express');
 require('dotenv').config();
 const app = express();
 app.use(express.json());
+const cors = require('cors'); // Import the 'cors' package
+app.use(cors());
 
 //Connect to the databse
 const connectDB = require('./config/db');
