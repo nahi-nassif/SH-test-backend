@@ -85,10 +85,12 @@ exports.chatWithId = async (req, res) => {
 
         const apiResponse = await gemini.getGeminiResponse(message);
 
-        //Log the AI response
-        saveChat(userId, withId, apiResponse.message, true);
-
         const html = marked.parse(apiResponse.message.replace(/^[\u200B\u200C\u200D\u200E\u200F\uFEFF]/,""));
+
+        //Log the AI response
+        saveChat(userId, withId, html, true);
+
+        
 
         res.status(201).json({ message: html.replace(/[\n]/g,'<br/>')})
 
